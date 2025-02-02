@@ -10,14 +10,28 @@ export default {
             return {
                 "data": [
                     {
-                        "id": "step-v1",
+                        "id": "step",
                         "object": "model",
-                        "owned_by": "step-free-api"
+                        "owned_by": "step-free-api",
+                        "description": "Default StepChat model"
                     },
                     {
-                        "id": "step-v1-vision",
+                        "id": "step2",
                         "object": "model",
-                        "owned_by": "step-free-api"
+                        "owned_by": "step-free-api",
+                        "description": "StepChat model with exampleId 6710ff1a80c0c9de0ffa887c"
+                    },
+                    {
+                        "id": "step2-creator-2",
+                        "object": "model",
+                        "owned_by": "step-free-api",
+                        "description": "StepChat model with creator-2 capabilities"
+                    },
+                    {
+                        "id": "stepO1-3",
+                        "object": "model",
+                        "owned_by": "step-free-api",
+                        "description": "StepChat model with O1-3 capabilities"
                     }
                 ]
             };

@@ -223,7 +223,7 @@ async function createCompletion(
     const { deviceId, token } = await acquireToken(refreshToken);
     const result = await axios.post(
       `https://yuewen.cn/api/proto.chat.v1.ChatMessageService/SendMessageStream`,
-      messagesPrepare(convId, messages, refs),
+      messagesPrepare(convId, messages, refs, model),
       {
         headers: {
           "Content-Type": "application/connect+json",
@@ -303,7 +303,7 @@ async function createCompletionStream(
     const { deviceId, token } = await acquireToken(refreshToken);
     const result = await axios.post(
       `https://yuewen.cn/api/proto.chat.v1.ChatMessageService/SendMessageStream`,
-      messagesPrepare(convId, messages, refs),
+      messagesPrepare(convId, messages, refs, model),
       {
         headers: {
           "Content-Type": "application/connect+json",
@@ -393,9 +393,12 @@ function extractRefFileUrls(messages: any[]) {
  * assistant:旧消息2
  * user:新消息
  *
+ * @param convId 会话ID
  * @param messages 参考gpt系列消息格式，多轮对话请完整提供上下文
+ * @param refs 引用文件列表
+ * @param model 模型名称
  */
-function messagesPrepare(convId: string, messages: any[], refs: any[]) {
+function messagesPrepare(convId: string, messages: any[], refs: any[], model: string = MODEL_NAME) {
   // 检查最新消息是否含有"type": "image_url"或"type": "file",如果有则注入消息
   let latestMessage = messages[messages.length - 1];
   let hasFileOrImage =
@@ -431,12 +434,26 @@ function messagesPrepare(convId: string, messages: any[], refs: any[]) {
     }, "") + "assistant:";
 
   logger.info("\n对话合并：\n" + content);
+
+  // 根据model选择exampleId
+  let exampleId = "6710ff1a80c0c9de0ffa887c"; // 默认使用step2的exampleId
+
+  if (model === "step") {
+    exampleId = undefined; // 如果是step模型，不使用exampleId
+  } else if (model === "step2-creator-2") {
+    exampleId = "step2-creator-2";
+  } else if (model === "stepO1-3") {
+    exampleId = "stepO1-3";
+  }
+
   const json = JSON.stringify({
     chatId: convId,
     messageInfo: {
       text: content,
       attachments: refs.length > 0 ? refs : undefined,
     },
+    messageMode: "SEND_MESSAGE",
+    ...(exampleId && { exampleId })
   });
   const data = wrapData(json);
   return data;

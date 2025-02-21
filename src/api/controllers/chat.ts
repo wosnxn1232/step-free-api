@@ -45,6 +45,11 @@ const accessTokenMap = new Map();
 // access_token请求队列映射
 const accessTokenRequestQueueMap: Record<string, Function[]> = {};
 
+enum TEXT_EVENT_STAGE {
+  THINKING = 'TEXT_STAGE_THINKING',
+  SOLUTION = 'TEXT_STAGE_SOLUTION'
+}
+
 /**
  * 请求access_token
  *
@@ -569,6 +574,12 @@ function createTransStream(
   stream: any,
   endCallback?: Function
 ) {
+  let thinking = false
+  const isSearchModel = true;
+  const isThinkingModel = model.includes('think') || model.includes('r1');
+  const isSilentModel = model.includes('silent');
+  const isFoldModel = false;
+  logger.info(`模型: ${model}, 是否思考: ${isThinkingModel}, 是否联网搜索: ${isSearchModel}, 是否静默思考: ${isSilentModel}, 是否折叠思考: ${isFoldModel}`);
   // 消息创建时间
   const created = util.unixTimestamp();
   // 创建转换流
@@ -620,7 +631,7 @@ function createTransStream(
       ) {
         const refContent = result.pipelineEvent.eventSearch.results.reduce(
           (str, v) => {
-            return (str += `检索 ${v.title} - ${v.url} ...\n`);
+            return (str += `<a href="${v.url}">${v.title}</a>\n`);
           },
           ""
         );
@@ -632,7 +643,7 @@ function createTransStream(
             {
               index: 0,
               delta: {
-                content: `${refContent}\n`,
+                content: `<details><summary>搜索来源</summary><pre>${refContent}</pre></details>\n`,
               },
               finish_reason: null,
             },
@@ -642,20 +653,39 @@ function createTransStream(
         !transStream.closed && transStream.write(data);
       }
     } else if (result.textEvent && result.textEvent.text) {
+      let content = result.textEvent.text?.replace(/<web_[0-9a-z]+>/g, '')
+      let reasoning_content = ''
+      if (isThinkingModel) {
+        // 补思考过程开头
+        if (!thinking && result.textEvent.stage === TEXT_EVENT_STAGE.THINKING) {
+          thinking = true
+          reasoning_content = '<think>' + content
+          content = ''
+        } else if (thinking && result.textEvent.stage === TEXT_EVENT_STAGE.SOLUTION) {
+          thinking = false;
+          reasoning_content = content + '</think>'
+          content = ''
+        } else if (thinking && result.textEvent.stage === TEXT_EVENT_STAGE.THINKING) {
+          reasoning_content = content
+          content = ''
+        }
+      }
+
       const data = `data: ${JSON.stringify({
-        id: convId,
-        model,
-        object: "chat.completion.chunk",
-        choices: [
-          {
-            index: 0,
-            delta: { content: result.textEvent.text },
-            finish_reason: null,
-          },
-        ],
-        created,
-      })}\n\n`;
-      !transStream.closed && transStream.write(data);
+          id: convId,
+          model,
+          object: "chat.completion.chunk",
+          choices: [
+            {
+              index: 0,
+              delta: { content, reasoning_content },
+              finish_reason: null,
+            },
+          ],
+          created,
+        })}\n\n`;
+
+      !transStream.closed && data && transStream.write(data);
     } else if (result.doneEvent) {
       const data = `data: ${JSON.stringify({
         id: convId,

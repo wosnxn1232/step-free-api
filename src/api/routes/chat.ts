@@ -20,6 +20,7 @@ export default {
             const token = _.sample(tokens);
             const model = request.body.model;
             const messages =  request.body.messages;
+            request.body.use_search = true
             if (request.body.stream) {
                 const stream = await chat.createCompletionStream(model, messages, token, request.body.use_search);
                 return new Response(stream, {

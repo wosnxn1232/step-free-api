@@ -66,12 +66,11 @@ async function requestToken(refreshToken: string) {
       {},
       {
         headers: {
-          Cookie: `Oasis-Token=${token}`,
-          Referer: "https://yuewen.cn/chats/new",
+          Cookie: `Oasis-Webid=${deviceId};Oasis-Token=${token}`,
           ...FAKE_HEADERS,
           "Oasis-Webid": deviceId,
         },
-        timeout: 15000,
+        timeout: 20000,
         validateStatus: () => true,
       }
     );
@@ -153,7 +152,7 @@ async function createConversation(name: string, refreshToken: string) {
         Referer: "https://yuewen.cn/chats/new",
         ...FAKE_HEADERS,
       },
-      timeout: 15000,
+      timeout: 20000,
       validateStatus: () => true,
     }
   );
@@ -182,7 +181,7 @@ async function removeConversation(convId: string, refreshToken: string) {
         Referer: `https://yuewen.cn/chats/${convId}`,
         ...FAKE_HEADERS,
       },
-      timeout: 15000,
+      timeout: 20000,
       validateStatus: () => true,
     }
   );
@@ -738,7 +737,7 @@ function generateCookie(deviceId: string, accessToken: string) {
 async function checkFileUrl(fileUrl: string) {
   if (util.isBASE64Data(fileUrl)) return;
   const result = await axios.head(fileUrl, {
-    timeout: 15000,
+    timeout: 20000,
     headers: {
       UserAgent:
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
@@ -840,7 +839,7 @@ async function uploadFile(fileUrl: string, refreshToken: string) {
           Referer: "https://yuewen.cn/chats/new",
           ...FAKE_HEADERS,
         },
-        timeout: 15000,
+        timeout: 20000,
       }
     );
     ({ fileStatus, needFurtherCall } = checkResult(result, refreshToken));
@@ -887,7 +886,7 @@ async function getTokenLiveStatus(refreshToken: string) {
         ...FAKE_HEADERS,
         "Oasis-Webid": deviceId,
       },
-      timeout: 15000,
+      timeout: 20000,
       validateStatus: () => true,
     }
   );

@@ -444,6 +444,8 @@ function messagesPrepare(convId: string, messages: any[], refs: any[], model: st
     exampleId = "step2-creator-2";
   } else if (model === "stepO1-3") {
     exampleId = "stepO1-3";
+  } else {
+    exampleId = 'deepSeek-r1'
   }
 
   const json = JSON.stringify({

@@ -32,6 +32,12 @@ export default {
                         "object": "model",
                         "owned_by": "step-free-api",
                         "description": "StepChat model with O1-3 capabilities"
+                    },
+                    {
+                        "id": "deepseek-r1",
+                        "object": "model",
+                        "owned_by": "step-free-api",
+                        "description": "StepChat model with ds-r1 capabilities"
                     }
                 ]
             };

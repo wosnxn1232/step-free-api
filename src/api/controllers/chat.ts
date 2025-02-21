@@ -578,7 +578,12 @@ function createTransStream(
   const isSearchModel = true;
   const isThinkingModel = model.includes('think') || model.includes('r1');
   const isSilentModel = model.includes('silent');
-  const isFoldModel = false;
+  const isFoldModel = model.includes('fold');
+  let citations = [] as {
+    hashKey: string
+    serialNumber: number
+    url: string
+  }[]
   logger.info(`模型: ${model}, 是否思考: ${isThinkingModel}, 是否联网搜索: ${isSearchModel}, 是否静默思考: ${isSilentModel}, 是否折叠思考: ${isFoldModel}`);
   // 消息创建时间
   const created = util.unixTimestamp();
@@ -624,17 +629,11 @@ function createTransStream(
       !transStream.closed && transStream.write(data);
       !transStream.closed && transStream.end("data: [DONE]\n\n");
       endCallback && endCallback();
-    } else if (result.pipelineEvent) {
+    } else if (result.sourcingEvent) {
       if (
-        result.pipelineEvent.eventSearch &&
-        result.pipelineEvent.eventSearch.results
+        Array.isArray(result.sourcingEvent.indexReferences)
       ) {
-        const refContent = result.pipelineEvent.eventSearch.results.reduce(
-          (str, v) => {
-            return (str += `<a href="${v.url}">${v.title}</a>\n`);
-          },
-          ""
-        );
+        citations = result.sourcingEvent.indexReferences
         const data = `data: ${JSON.stringify({
           id: convId,
           model,
@@ -643,17 +642,27 @@ function createTransStream(
             {
               index: 0,
               delta: {
-                content: `<details><summary>搜索来源</summary><pre>${refContent}</pre></details>\n`,
+                content: '',
               },
               finish_reason: null,
             },
           ],
+          citations: result.sourcingEvent.indexReferences.map(_ => _.url),
           created,
         })}\n\n`;
         !transStream.closed && transStream.write(data);
       }
     } else if (result.textEvent && result.textEvent.text) {
-      let content = result.textEvent.text?.replace(/<web_[0-9a-z]+>/g, '')
+      let content = result.textEvent.text || ''
+
+      if (content.indexOf('\n```yuewen') === 0) return
+
+      content = content.replace(/<web_([0-9a-z]+)>/g, (match, hashKey) => {
+        const citation = citations.find(c => c.hashKey === hashKey);
+        if (!citation) return match;
+        return `[<sup>${citation.serialNumber}</sup>](${citation.url})`
+      });
+
       let reasoning_content = ''
       if (isThinkingModel) {
         // 补思考过程开头
@@ -686,6 +695,7 @@ function createTransStream(
         })}\n\n`;
 
       !transStream.closed && data && transStream.write(data);
+    } else if (result.cardEvent){
     } else if (result.doneEvent) {
       const data = `data: ${JSON.stringify({
         id: convId,

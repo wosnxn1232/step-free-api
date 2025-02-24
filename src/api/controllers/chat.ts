@@ -501,9 +501,14 @@ async function receiveStream(model: string, convId: string, stream: any) {
         },
       ],
       usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+      citations: [],
       created: util.unixTimestamp(),
     };
-    let refContent = "";
+    let citations = [] as {
+      hashKey: string
+      serialNumber: number
+      url: string
+    }[]
     const parser = (buffer: Buffer) => {
       const result = _.attempt(() => JSON.parse(buffer.toString()));
       if (_.isError(result)) {
@@ -516,25 +521,19 @@ async function receiveStream(model: string, convId: string, stream: any) {
         if (
           result.pipelineEvent.eventSearch &&
           result.pipelineEvent.eventSearch.results
-        ) {
-          refContent = result.pipelineEvent.eventSearch.results.reduce(
-            (str, v) => {
-              return (str += `${v.title} - ${v.url}\n`);
-            },
-            ""
-          );
-        }
-      } else if (result.textEvent && result.textEvent.text)
+        ) {}
+      } else if (result.textEvent && result.textEvent.text) {
+        if (result.textEvent.text.indexOf('\n```yuewen') === 0) return
         data.choices[0].message.content += result.textEvent.text;
-      else if (result.doneEvent) {
-        data.choices[0].message.content =
-          data.choices[0].message.content.replace(
-            /<(web|url|unknown)_[0-9a-zA-Z]+>/g,
-            ""
-          );
-        data.choices[0].message.content += refContent
-          ? `\n\n搜索结果来自：\n${refContent.replace(/\n$/, "")}`
-          : "";
+      } else if (Array.isArray(result.sourcingEvent?.indexReferences)) {
+        citations = result.sourcingEvent?.indexReferences
+        data.citations = result.sourcingEvent.indexReferences.map(_ => _.url)
+      } else if (result.doneEvent) {
+        data.choices[0].message.content = data.choices[0].message.content.replace(/<web_([0-9a-z]+)>/g, (match, hashKey) => {
+          const citation = citations.find(c => c.hashKey === hashKey);
+          if (!citation) return match;
+          return `[${citation.serialNumber}]`
+        });
       }
     };
     let chunk = Buffer.from([]);
@@ -660,7 +659,7 @@ function createTransStream(
       content = content.replace(/<web_([0-9a-z]+)>/g, (match, hashKey) => {
         const citation = citations.find(c => c.hashKey === hashKey);
         if (!citation) return match;
-        return `[<sup>${citation.serialNumber}</sup>](${citation.url})`
+        return `[${citation.serialNumber}]`
       });
 
       let reasoning_content = ''

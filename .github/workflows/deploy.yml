@@ -38,7 +38,7 @@ jobs:
         uses: denoland/deployctl@v1
         with:
           project: "wosnxn1232-step-free-a-48"
-          entrypoint: "index.js"
+          entrypoint: "dist/index.js"
           root: "build"
           
           

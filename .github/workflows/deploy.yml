@@ -39,6 +39,6 @@ jobs:
         with:
           project: "wosnxn1232-step-free-a-48"
           entrypoint: "index.js"
-          root: "dist"
+          root: "/dist"
           
           
